@@ -141,6 +141,13 @@ function test_multi_index()
 	assert_equal("xxx", U.multi_index({idx = {[4] = "xxx"}}, "idx", 4))
 end
 
+function test_multi_index_set()
+	t = {}
+	U.multi_index_set(t, 'ok', 't1', 't2', 't3')
+	U.multi_index_set(t, 'test', 't1', 'test')
+	assert_table_equal({t1 = {t2 = {t3 = 'ok'}, test = 'test'}}, t)
+end
+
 function test_private()
 	local t = {}
 	U.private(t).x = 42
