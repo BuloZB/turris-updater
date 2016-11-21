@@ -556,14 +556,10 @@ end
 Check if we can perform installation of packages and no files
 of other packages would get overwritten. It checks both the
 newly installed packages and the currently installed packages.
-It doesn't report any already collisions and it doesn't show collisions
-with removed packages.
+It doesn't show collisions with removed packages.
 
 Note that when upgrading, the old packages needs to be considered removed
 (and listed in the remove_pkgs set).
-
-Note that we are only working with files and directories they are in. Directories
-containing no files are not checked.
 
 The current_status is what is returned from status_parse(). The remove_pkgs
 is set of package names (without versions) to remove. It's not a problem if
