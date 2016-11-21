@@ -603,7 +603,7 @@ function collision_check(current_status, remove_pkgs, add_pkgs)
 			end
 			node = node.nodes[name]
 			local ptype = n:sub(-1, -1) == '/' and "dir" or "file" -- if there is trailing slash, then it is directory.
-			utils.multi_index_set(node.pt, true, ptype, when, pkg_name)
+			utils.multi_set(node.pt, true, ptype, when, pkg_name)
 		end
 	end
 	-- Add current state to tree
@@ -631,7 +631,7 @@ function collision_check(current_status, remove_pkgs, add_pkgs)
 	local function set_early_remove(node, pkgs) -- recursively add all files from given node to early_remove for set of packages in pkgs
 		if utils.multi_index(node.pt, 'file', 'to-remove') then
 			for pkg in pairs(pkgs) do
-				utils.multi_index_set(early_remove, true, pkg, node.path)
+				utils.multi_set(early_remove, true, pkg, node.path)
 			end
 		else
 			for _, n in pairs(node.nodes) do
@@ -677,14 +677,11 @@ function collision_check(current_status, remove_pkgs, add_pkgs)
 			if node.pt.file then
 				if not node.pt.dir['existing'] and not node.pt.dir['new'] then -- directory to be removed
 					check_file(node) -- directory will be removed so check files
-					local pkgs = utils.shallow_copy(node.pt.file['new'] or {})
-					utils.table_merge(pkgs, node.pt.file['existing'] or {})
-					set_early_remove(node, pkgs)
+					-- Note: If there is no new package then executing set_early_remove has no effect
+					set_early_remove(node, node.pt.file['new'] or {}) -- early remove makes sense only for newly created files
 					recurse = false -- This is now file, directory will be removed.
 				elseif not node.pt.file['existing'] and not node.pt.file['new'] then -- file to be removed
-					local pkgs = utils.shallow_copy(node.pt.dir['new'] or {})
-					utils.table_merge(pkgs, node.pt.dir['existing'] or {})
-					set_early_remove(node, pkgs) -- remove file in early process to be replaced with directory
+					set_early_remove(node, node.pt.dir['new'] or {}) -- remove file in early process to be replaced with directory
 				else -- Directory collision with file
 					set_collision(node)
 					recurse = false -- We detected collision in this level. No point in going deeper.

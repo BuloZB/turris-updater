@@ -35,7 +35,7 @@ local run_command = run_command
 
 module "utils"
 
--- luacheck: globals lines2set map set2arr arr2set cleanup_dirs slurp clone shallow_copy table_merge arr_append exception multi_index multi_index_set private filter_best strip table_overlay randstr arr_prune arr_inv
+-- luacheck: globals lines2set map set2arr arr2set cleanup_dirs slurp clone shallow_copy table_merge arr_append exception multi_index multi_set private filter_best strip table_overlay randstr arr_prune arr_inv
 
 --[[
 Convert provided text into set of lines. Doesn't care about the order.
@@ -219,7 +219,7 @@ it sets it. But it can't handle if there is value in table
 different than just another table for all indexes given. Such
 situation fails with error.
 ]]
-function multi_index_set(itable, value, ...)
+function multi_set(itable, value, ...)
 	local idxs = {...}
 	local idx_last = table.remove(idxs)
 	for _, idx in ipairs(idxs) do
@@ -229,7 +229,6 @@ function multi_index_set(itable, value, ...)
 		if not itable[idx] then itable[idx] = {} end
 		itable = itable[idx]
 	end
-	if not itable[idx_last] then itable[idx_last] = {} end
 	itable[idx_last] = value
 end
 
