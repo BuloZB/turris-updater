@@ -133,18 +133,24 @@ local function pkg_unpack(operations, status)
 end
 
 local function pkg_collision_check(status, to_remove, to_install)
-	local collisions, early_remove, removes = backend.collision_check(status, to_remove, to_install)
-	if next(collisions) then
+	local collisions, ignore_collisions, early_remove, removes = backend.collision_check(status, to_remove, to_install)
+	local function collision_str(collisions)
 		--[[
 		Collisions:
 		• /a/file: pkg1 (new), pkg2 (existing)
 		• /b/file: pkg1 (new), pkg2 (existing), pkg3 (new)
 		]]
-		error("Collisions:\n" .. table.concat(utils.set2arr(utils.map(collisions, function (file, packages)
-			return "• " .. file .. ": " .. table.concat(utils.set2arr(utils.map(packages, function (package, tp)
-				return package .. " (" .. tp .. ")", true
-			end)), ", "), true
-		end)), "\n"))
+		return "Collisions:\n" .. table.concat(utils.set2arr(utils.map(collisions, function (file, packages)
+				return "• " .. file .. ": " .. table.concat(utils.set2arr(utils.map(packages, function (package, tp)
+					return package .. " (" .. tp .. ")", true
+				end)), ", "), true
+			end)), "\n")
+	end
+	if next(collisions) then
+		error(collision_str(collisions))
+	end
+	if next(ignore_collisions) then
+		WARN(collision_str(ignore_collisions))
 	end
 	return removes, early_remove
 end

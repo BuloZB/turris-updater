@@ -556,7 +556,8 @@ end
 Check if we can perform installation of packages and no files
 of other packages would get overwritten. It checks both the
 newly installed packages and the currently installed packages.
-It doesn't show collisions with removed packages.
+It doesn't report any already collisions and it doesn't show collisions
+with removed packages.
 
 Note that when upgrading, the old packages needs to be considered removed
 (and listed in the remove_pkgs set).
@@ -570,11 +571,14 @@ It returns a table, values are name of files where are new collisions, values
 are tables where the keys are names of packages and values are either `existing`
 or `new`.
 
-The second result is table of file-directory/directory-file collisions, those can be
+The second result has same format as first one, but it contains ignored collisions.
+Such collisions are only between already installed packages.
+
+The third result is table of file-directory/directory-file collisions, those can be
 resolvable by early deletions. Keys are names of packages and values are sets of
 all files to be deleted.
 
-The third result is a set of all the files that shall disappear after
+The fourth result is a set of all the files that shall disappear after
 performing these operations.
 ]]
 function collision_check(current_status, remove_pkgs, add_pkgs)
@@ -623,9 +627,11 @@ function collision_check(current_status, remove_pkgs, add_pkgs)
 
 	-- First returned result. Table with collisions. Key is collision path and value is table with packages names as keys and "when" as values.
 	local collisions = {}
-	-- Second returned result. We fill this with nodes we want to remove before given package is merged to file system. Key is package name and value is set of paths.
+	-- Second returned result. Table with collisions. Same format as 'collisions', but for packages already installed.
+	local ignore_collisions = {}
+	-- Third returned result. We fill this with nodes we want to remove before given package is merged to file system. Key is package name and value is set of paths.
 	local early_remove = {}
-	-- Third returned result. Set of files that shall really disappear.
+	-- Fourth returned result. Set of files that shall really disappear.
 	local remove = {}
 	-- Now iterate trough nodes and discover collisions, files to be removed and removed early in the process of installation
 	local function set_early_remove(node, pkgs) -- recursively add all files from given node to early_remove for set of packages in pkgs
@@ -639,7 +645,7 @@ function collision_check(current_status, remove_pkgs, add_pkgs)
 			end
 		end
 	end
-	local function set_collision(node) -- node is detected as containing collision. This adds it to collisions
+	local function set_collision(node, collisions) -- node is detected as containing collision. This adds it to collisions
 		assert(not collisions[node.path]) -- adding node once again shouldn't happen (although it would be ok)
 		collisions[node.path] = {}
 		local function set(what, when)
@@ -655,15 +661,18 @@ function collision_check(current_status, remove_pkgs, add_pkgs)
 	local function check_file(node) -- Check for collisions between files.
 		if node.pt.file['new'] or node.pt.file['existing'] then
 			local name -- if this file is required by more than one package, then collision
-			for _, when in pairs({'new', 'existing'}) do
+			local coll = collisions -- start with fatal collision for 'new'
+			for _, when in ipairs({'new', 'existing'}) do
 				for pkg_name in pairs(node.pt.file[when] or {}) do
 					if not name then
 						name = pkg_name
 					elseif name ~= pkg_name then
-						set_collision(node)
+						set_collision(node, coll)
 						return
 					end
 				end
+				-- If there is no collision for 'new' then we have nil or specific name in 'name' and if this name is one of installed, then it isn't fatal collision.
+				coll = (not name or utils.multi_index(node.pt, 'file', 'existing', name)) and ignore_collisions or collisions
 			end
 		else -- such file can be removed
 			remove[node.path] = true
@@ -683,7 +692,7 @@ function collision_check(current_status, remove_pkgs, add_pkgs)
 				elseif not node.pt.file['existing'] and not node.pt.file['new'] then -- file to be removed
 					set_early_remove(node, node.pt.dir['new'] or {}) -- remove file in early process to be replaced with directory
 				else -- Directory collision with file
-					set_collision(node)
+					set_collision(node, collisions)
 					recurse = false -- We detected collision in this level. No point in going deeper.
 				end
 			-- else we do nothing. It doesn't matter if there are various requests on directory.
@@ -699,7 +708,7 @@ function collision_check(current_status, remove_pkgs, add_pkgs)
 			end
 		end
 	end
-	return collisions, early_remove, remove
+	return collisions, ignore_collisions, early_remove, remove
 end
 
 --[[

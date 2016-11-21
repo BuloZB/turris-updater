@@ -132,7 +132,7 @@ local function mocks_install()
 	end)
 	mock_gen("backend.pkg_unpack", function () return "pkg_dir" end)
 	mock_gen("backend.pkg_examine", function () return {f = true}, {d = true}, {c = "1234567890123456"}, {Package = "pkg-name", files = {f = true}, Conffiles = {c = "1234567890123456"}, Version = "1", Status = {"install", "user", "installed"}} end)
-	mock_gen("backend.collision_check", function () return {}, {}, {}  end)
+	mock_gen("backend.collision_check", function () return {}, {}, {}, {}  end)
 	mock_gen("backend.pkg_merge_files")
 	mock_gen("backend.pkg_cleanup_files")
 	mock_gen("backend.control_cleanup")
@@ -192,7 +192,7 @@ end
 -- Test a transaction when it goes well
 function test_perform_ok()
 	mocks_install()
-	mock_gen("backend.collision_check", function () return {}, {}, {d2 = true}  end)
+	mock_gen("backend.collision_check", function () return {}, {}, {}, {d2 = true}  end)
 	local result = T.perform({
 		{
 			op = "install",
